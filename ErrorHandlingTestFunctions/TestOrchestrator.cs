@@ -17,10 +17,15 @@ namespace ErrorHandlingTestFunctions
         {
             await context.CallActivityAsync<string>("TestOrchestrator_Hello", ("World", false));
 
+            var retryOptions = new RetryOptions(
+                firstRetryInterval: TimeSpan.FromSeconds(5),
+                maxNumberOfAttempts: 3);
+
             var outputs = new List<Task<string>>();
 
-            // Replace "hello" with the name of your Durable Activity Function.
-            outputs.Add(context.CallSubOrchestratorAsync<string>("TestSubOrchestrator", "Tokyo"));
+            // with retry
+            outputs.Add(context.CallSubOrchestratorWithRetryAsync<string>("TestSubOrchestrator", retryOptions, "Tokyo"));
+            // no retry
             outputs.Add(context.CallSubOrchestratorAsync<string>("TestSubOrchestrator", "Seattle"));
             outputs.Add(context.CallSubOrchestratorAsync<string>("TestSubOrchestrator", "London"));
             var result = await Task.WhenAll(outputs);
@@ -36,8 +41,16 @@ namespace ErrorHandlingTestFunctions
         {
             var name = context.GetInput<string>();
 
-            await context.CallActivityAsync<string>("TestOrchestrator_Hello", (name, false));
-            
+            var retryOptions = new RetryOptions(
+                firstRetryInterval: TimeSpan.FromSeconds(5),
+                maxNumberOfAttempts: 3);
+
+            // Replace "hello" with the name of your Durable Activity Function.
+
+            // with retry
+            await context.CallActivityWithRetryAsync<string>("TestOrchestrator_Hello", retryOptions, (name, false));
+
+            // no retry
             return await context.CallActivityAsync<string>("TestOrchestrator_Hello", ($"{name} x2", false));
         }
 
