@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
@@ -51,7 +52,27 @@ namespace ErrorHandlingTestFunctions
             await context.CallActivityWithRetryAsync<string>("TestOrchestrator_Hello", retryOptions, (name, false));
 
             // no retry
-            return await context.CallActivityAsync<string>("TestOrchestrator_Hello", ($"{name} x2", false));
+            TimeSpan timeout = TimeSpan.FromSeconds(30);
+            DateTime deadline = context.CurrentUtcDateTime.Add(timeout);
+
+            using (var cts = new CancellationTokenSource())
+            {
+                Task activityTask = context.CallActivityAsync<string>("TestOrchestrator_Hello", ($"{name} x2", false));
+                Task timeoutTask = context.CreateTimer(deadline, cts.Token);
+
+                Task winner = await Task.WhenAny(activityTask, timeoutTask);
+                if (winner == activityTask)
+                {
+                    // success case
+                    cts.Cancel();
+                    return ((Task<string>)winner).Result;
+                }
+                else
+                {
+                    // timeout case
+                    throw new Exception($"Timeout at {name}.");
+                }
+            }
         }
 
         [FunctionName("TestOrchestrator_Hello")]
