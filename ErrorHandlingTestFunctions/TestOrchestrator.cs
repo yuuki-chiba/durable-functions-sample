@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -14,7 +15,7 @@ namespace ErrorHandlingTestFunctions
         public static async Task<List<string>> RunOrchestrator(
             [OrchestrationTrigger] DurableOrchestrationContext context)
         {
-            await context.CallActivityAsync<string>("TestOrchestrator_Hello", "World");
+            await context.CallActivityAsync<string>("TestOrchestrator_Hello", ("World", false));
 
             var outputs = new List<Task<string>>();
 
@@ -24,7 +25,7 @@ namespace ErrorHandlingTestFunctions
             outputs.Add(context.CallSubOrchestratorAsync<string>("TestSubOrchestrator", "London"));
             var result = await Task.WhenAll(outputs);
 
-            await context.CallActivityAsync<string>("TestOrchestrator_Hello", "World x2");
+            await context.CallActivityAsync<string>("TestOrchestrator_Hello", ("World x2", false));
 
             return null;
         }
@@ -35,14 +36,21 @@ namespace ErrorHandlingTestFunctions
         {
             var name = context.GetInput<string>();
 
-            await context.CallActivityAsync<string>("TestOrchestrator_Hello", name);
+            await context.CallActivityAsync<string>("TestOrchestrator_Hello", (name, false));
             
-            return await context.CallActivityAsync<string>("TestOrchestrator_Hello", $"{name} x2");
+            return await context.CallActivityAsync<string>("TestOrchestrator_Hello", ($"{name} x2", false));
         }
 
         [FunctionName("TestOrchestrator_Hello")]
-        public static string SayHello([ActivityTrigger] string name, ILogger log)
+        public static string SayHello([ActivityTrigger] DurableActivityContext context, ILogger log)
         {
+            var (name, throwEx) = context.GetInput<(string, bool)>();
+
+            if (throwEx)
+            {
+                throw new Exception($"Exception occurred at {name}.");
+            }
+
             log.LogInformation($"Saying hello to {name}.");
             return $"Hello {name}!";
         }
