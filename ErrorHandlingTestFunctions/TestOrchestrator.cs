@@ -14,15 +14,30 @@ namespace ErrorHandlingTestFunctions
         public static async Task<List<string>> RunOrchestrator(
             [OrchestrationTrigger] DurableOrchestrationContext context)
         {
-            var outputs = new List<string>();
+            await context.CallActivityAsync<string>("TestOrchestrator_Hello", "World");
+
+            var outputs = new List<Task<string>>();
 
             // Replace "hello" with the name of your Durable Activity Function.
-            outputs.Add(await context.CallActivityAsync<string>("TestOrchestrator_Hello", "Tokyo"));
-            outputs.Add(await context.CallActivityAsync<string>("TestOrchestrator_Hello", "Seattle"));
-            outputs.Add(await context.CallActivityAsync<string>("TestOrchestrator_Hello", "London"));
+            outputs.Add(context.CallSubOrchestratorAsync<string>("TestSubOrchestrator", "Tokyo"));
+            outputs.Add(context.CallSubOrchestratorAsync<string>("TestSubOrchestrator", "Seattle"));
+            outputs.Add(context.CallSubOrchestratorAsync<string>("TestSubOrchestrator", "London"));
+            var result = await Task.WhenAll(outputs);
 
-            // returns ["Hello Tokyo!", "Hello Seattle!", "Hello London!"]
-            return outputs;
+            await context.CallActivityAsync<string>("TestOrchestrator_Hello", "World x2");
+
+            return null;
+        }
+
+        [FunctionName("TestSubOrchestrator")]
+        public static async Task<string> RunSubOrchestrator(
+            [OrchestrationTrigger] DurableOrchestrationContext context, ILogger log)
+        {
+            var name = context.GetInput<string>();
+
+            await context.CallActivityAsync<string>("TestOrchestrator_Hello", name);
+            
+            return await context.CallActivityAsync<string>("TestOrchestrator_Hello", $"{name} x2");
         }
 
         [FunctionName("TestOrchestrator_Hello")]
