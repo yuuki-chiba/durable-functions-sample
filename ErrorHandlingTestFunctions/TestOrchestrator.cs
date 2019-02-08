@@ -16,15 +16,20 @@ namespace ErrorHandlingTestFunctions
         public static async Task<string> RunOrchestrator(
             [OrchestrationTrigger] DurableOrchestrationContext context, ILogger log)
         {
-            log.LogDebug($"*** Start Orch.");
+            if (!context.IsReplaying) log.LogDebug($"*** Start Orch.");
 
             var retryOptions = new RetryOptions(
                 firstRetryInterval: TimeSpan.FromSeconds(5),
                 maxNumberOfAttempts: 2);
+            retryOptions.Handle = (ex) =>
+            {
+                if (!context.IsReplaying) log.LogDebug($"*** Retry handling at Orch. : {ex.Message}");
+                return true;
+            };
 
             await context.CallActivityWithRetryAsync<string>("TestOrchestrator_Hello", retryOptions, ("World", false, false));
 
-            log.LogDebug($"*** Reach check point #1");
+            if (!context.IsReplaying) log.LogDebug($"*** Reach check point #1");
 
             var outputs = new List<Task<string>>();
 
@@ -39,15 +44,15 @@ namespace ErrorHandlingTestFunctions
             }
             catch (Exception ex)
             {
-                log.LogDebug($"*** Catch exception: {ex.Message}");
+                if (!context.IsReplaying) log.LogDebug($"*** Catch exception: {ex.Message}");
                 // ignore exception
             }
 
-            log.LogDebug($"*** Reach check point #2");
+            if (!context.IsReplaying) log.LogDebug($"*** Reach check point #2");
 
             await context.CallActivityAsync<string>("TestOrchestrator_Hello", ("World x2", false, false));
 
-            log.LogDebug($"*** End Orch.");
+            if (!context.IsReplaying) log.LogDebug($"*** End Orch.");
 
             return "Succeeded";
         }
@@ -58,11 +63,16 @@ namespace ErrorHandlingTestFunctions
         {
             var name = context.GetInput<string>();
 
-            log.LogDebug($"**** Start SubOrch. : {name}");
+            if (!context.IsReplaying) log.LogDebug($"**** Start SubOrch. : {name}");
 
             var retryOptions = new RetryOptions(
                 firstRetryInterval: TimeSpan.FromSeconds(5),
                 maxNumberOfAttempts: 2);
+            retryOptions.Handle = (ex) =>
+            {
+                if (!context.IsReplaying) log.LogDebug($"*** Retry handling at SubOrch. : {ex.Message}");
+                return true;
+            };
 
             // variables for debug
             var throwEx = false;
@@ -72,7 +82,7 @@ namespace ErrorHandlingTestFunctions
             // with retry
             await context.CallActivityWithRetryAsync<string>("TestOrchestrator_Hello", retryOptions, (name, throwEx, useDelay));
 
-            log.LogDebug($"*** Reach check point at SubOrch. : {name}");
+            if (!context.IsReplaying) log.LogDebug($"*** Reach check point at SubOrch. : {name}");
 
             // variables for debug
             throwEx = false;
@@ -91,7 +101,7 @@ namespace ErrorHandlingTestFunctions
                 Task winner = await Task.WhenAny(activityTask, timeoutTask);
                 if (winner == activityTask)
                 {
-                    log.LogDebug($"**** Task Complete at SubOrch. : {name}");
+                    if (!context.IsReplaying) log.LogDebug($"**** Task Complete at SubOrch. : {name}");
 
                     // success case
                     cts.Cancel();
@@ -99,7 +109,7 @@ namespace ErrorHandlingTestFunctions
                 }
                 else
                 {
-                    log.LogDebug($"**** Timeout at SubOrch. : {name}");
+                    if (!context.IsReplaying) log.LogDebug($"**** Timeout at SubOrch. : {name}");
 
                     // timeout case
                     throw new Exception($"Timeout at {name}.");
