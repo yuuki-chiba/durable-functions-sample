@@ -21,6 +21,8 @@ namespace ErrorHandlingTestFunctions
             var retryOptions = new RetryOptions(
                 firstRetryInterval: TimeSpan.FromSeconds(5),
                 maxNumberOfAttempts: 2);
+            retryOptions.BackoffCoefficient = 3;
+            retryOptions.RetryTimeout = TimeSpan.FromSeconds(20);
             retryOptions.Handle = (ex) =>
             {
                 if (!context.IsReplaying) log.LogDebug($"*** Retry handling at Orch. : {ex.Message}");
@@ -68,6 +70,8 @@ namespace ErrorHandlingTestFunctions
             var retryOptions = new RetryOptions(
                 firstRetryInterval: TimeSpan.FromSeconds(5),
                 maxNumberOfAttempts: 2);
+            retryOptions.BackoffCoefficient = 3;
+            retryOptions.RetryTimeout = TimeSpan.FromSeconds(20);
             retryOptions.Handle = (ex) =>
             {
                 if (!context.IsReplaying) log.LogDebug($"*** Retry handling at SubOrch. : {ex.Message}");
