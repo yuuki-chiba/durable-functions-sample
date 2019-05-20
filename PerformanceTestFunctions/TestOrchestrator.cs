@@ -6,11 +6,18 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace PerformanceTestFunctions
 {
     public static class TestOrchestrator
     {
+        public class QueueMessageModels
+        {
+            [JsonProperty("key")]
+            public long Key { get; set; }
+        }
+
         [FunctionName("TestOrchestrator")]
         public static async Task<string> RunOrchestrator(
             [OrchestrationTrigger] DurableOrchestrationContext context, ILogger log)
@@ -156,18 +163,15 @@ namespace PerformanceTestFunctions
             return $"Hello {name}!";
         }
 
-        [FunctionName("TestOrchestrator_HttpStart")]
-        public static async Task<HttpResponseMessage> HttpStart(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")]HttpRequestMessage req,
-            [OrchestrationClient]DurableOrchestrationClient starter,
-            ILogger log)
+        [FunctionName("QueueStart")]
+        public static async Task Run([QueueTrigger("durable-function-trigger")]QueueMessageModels myQueueItem,
+            [OrchestrationClient]DurableOrchestrationClient starter, ILogger log)
         {
-            // Function input comes from the request content.
-            string instanceId = await starter.StartNewAsync("TestOrchestrator", null);
+            log.LogInformation($"C# Queue trigger function processed:  [Key] {myQueueItem.Key}");
 
-            log.LogInformation($"***** Started orchestration with ID = '{instanceId}'.");
+            var instanceId = await starter.StartNewAsync("TestOrchestrator", myQueueItem);
 
-            return starter.CreateCheckStatusResponse(req, instanceId);
+            log.LogInformation($"Started orchestration with ID = '{instanceId}'.");
         }
     }
 }
