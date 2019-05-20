@@ -16,7 +16,7 @@ namespace PerformanceTestFunctions
         public class QueueMessageModel
         {
             [JsonProperty("key")]
-            public long Key { get; set; }
+            public string Key { get; set; }
         }
 
         [FunctionName("TestOrchestrator")]
