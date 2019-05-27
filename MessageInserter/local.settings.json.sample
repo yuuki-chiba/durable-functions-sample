@@ -5,6 +5,6 @@
     "FUNCTIONS_WORKER_RUNTIME": "dotnet"
   },
   "ConnectionStrings": {
-    "AccessKey": "DefaultEndpointsProtocol=https;AccountName=iwpocfunctionimb534;AccountKey=OZCfjcz8FIkhJIS4LKj0LaguqisL+P9XxvvlzuTtpwH6v4uFZnzsra7+W9/Xc7cnBQQkL7qTP4uZ0Yb9OPF3vg==;EndpointSuffix=core.windows.net"
+    "AccessKey": "DefaultEndpointsProtocol=https;AccountName=..."
   }
 }
